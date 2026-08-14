@@ -91,15 +91,22 @@ async function getAdsGramAd(userId, language) {
     const url = new URL("https://api.adsgram.ai/advbot");
 
     url.searchParams.set("tgid", String(userId));
-    url.searchParams.set("blockid", String(ADSGRAM_BLOCK_ID));
+    url.searchParams.set("blockid", "42870");
     url.searchParams.set("language", language || "en");
     url.searchParams.set("token", ADSGRAM_TOKEN);
 
-    console.log("Requesting AdsGram ad...");
+    console.log("AdsGram request:");
+    console.log("  blockid:", "42870");
+    console.log("  language:", language || "en");
+    console.log("  token exists:", Boolean(ADSGRAM_TOKEN));
+    console.log("  token length:", ADSGRAM_TOKEN?.length);
 
     const response = await fetch(url);
 
     const body = await response.text();
+
+    console.log("AdsGram status:", response.status);
+    console.log("AdsGram response:", body);
 
     if (!response.ok) {
         throw new Error(
@@ -107,17 +114,7 @@ async function getAdsGramAd(userId, language) {
         );
     }
 
-    let data;
-
-    try {
-        data = JSON.parse(body);
-    } catch {
-        throw new Error(
-            `AdsGram returned invalid JSON: ${body}`
-        );
-    }
-
-    return data;
+    return JSON.parse(body);
 }
 
 // ============================================================
