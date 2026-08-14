@@ -14,6 +14,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // ============================================================
+// CORS (Required if frontend is hosted separately)
+// ============================================================
+
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    
+    next();
+});
+
+// ============================================================
 // TEST DATABASE
 // ============================================================
 //
@@ -49,11 +66,7 @@ ymid -> {
 }
 */
 
-// ============================================================
-// SERVE MINI APP
-// ============================================================
 
-app.use(express.static(path.join(__dirname, "public")));
 
 // ============================================================
 // HEALTH
