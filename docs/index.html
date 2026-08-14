@@ -501,11 +501,28 @@
                 "success"
             );
 
-            // Give the postback a moment to arrive.
-            setTimeout(
-                loadBalance,
-                2000
-            );
+            // ------------------------------------------------
+            // Wait for backend postback via polling
+            // ------------------------------------------------
+
+            const oldBalance = parseInt(balanceElement.textContent, 10) || 0;
+            let attempts = 0;
+            const maxAttempts = 15; // 15 * 2 seconds = 30 seconds
+
+            const pollInterval = setInterval(async () => {
+                attempts++;
+                await loadBalance();
+                
+                const newBalance = parseInt(balanceElement.textContent, 10) || 0;
+                
+                if (newBalance > oldBalance) {
+                    clearInterval(pollInterval);
+                    setStatus("✅ Reward confirmed! Points added.", "success");
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(pollInterval);
+                    setStatus("⏳ Postback is taking longer than expected. Balance will update once Monetag confirms.", "info");
+                }
+            }, 2000);
 
 
         } catch (error) {
