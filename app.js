@@ -14,10 +14,10 @@ const ADSGRAM_BLOCK_ID = process.env.ADSGRAM_BLOCK_ID;
 const REWARD_POINTS = Number(process.env.REWARD_POINTS || 100);
 
 console.log("AdsGram token loaded:", {
-    exists: !!ADSGRAM_TOKEN,
-    length: ADSGRAM_TOKEN?.length,
-    prefix: ADSGRAM_TOKEN?.slice(0, 4),
-    suffix: ADSGRAM_TOKEN?.slice(-4)
+    exists: Boolean(ADSGRAM_TOKEN),
+    length: ADSGRAM_TOKEN?.length || 0,
+    prefix: ADSGRAM_TOKEN?.slice(0, 4) || "",
+    suffix: ADSGRAM_TOKEN?.slice(-4) || ""
 });
 
 if (!BOT_TOKEN) {
@@ -42,7 +42,10 @@ app.use(express.json());
 
 const PORT = Number(process.env.PORT || 10000);
 
-// Health check
+// ============================================================
+// HEALTH CHECK
+// ============================================================
+
 app.get("/", (req, res) => {
     res.status(200).json({
         ok: true,
@@ -88,33 +91,148 @@ function getUser(userId) {
 // ============================================================
 
 async function getAdsGramAd(userId, language) {
-    const url = new URL("https://api.adsgram.ai/advbot");
+    /*
+        IMPORTANT:
+        This intentionally uses the FULL RAW URL.
 
-    url.searchParams.set("tgid", String(userId));
-    url.searchParams.set("blockid", "42870");
-    url.searchParams.set("language", language || "en");
-    url.searchParams.set("token", ADSGRAM_TOKEN);
+        Example:
 
-    console.log("AdsGram request:");
-    console.log("  blockid:", "42870");
-    console.log("  language:", language || "en");
-    console.log("  token exists:", Boolean(ADSGRAM_TOKEN));
-    console.log("  token length:", ADSGRAM_TOKEN?.length);
+        https://api.adsgram.ai/advbot?tgid=123456789&blockid=42870&language=en&token=YOUR_TOKEN
+    */
 
-    const response = await fetch(url);
+    const selectedLanguage = language || "en";
 
-    const body = await response.text();
+    const rawUrl =
+        "https://api.adsgram.ai/advbot" +
+        "?tgid=" + encodeURIComponent(String(userId)) +
+        "&blockid=" + encodeURIComponent(String(ADSGRAM_BLOCK_ID)) +
+        "&language=" + encodeURIComponent(selectedLanguage) +
+        "&token=" + encodeURIComponent(ADSGRAM_TOKEN);
 
-    console.log("AdsGram status:", response.status);
-    console.log("AdsGram response:", body);
+    // Never print the actual token.
+    const safeUrl =
+        "https://api.adsgram.ai/advbot" +
+        "?tgid=" + encodeURIComponent(String(userId)) +
+        "&blockid=" + encodeURIComponent(String(ADSGRAM_BLOCK_ID)) +
+        "&language=" + encodeURIComponent(selectedLanguage) +
+        "&token=***HIDDEN***";
 
-    if (!response.ok) {
+    console.log("========== ADSGRAM REQUEST ==========");
+    console.log("Method: GET");
+    console.log("URL:", safeUrl);
+    console.log("Block ID:", ADSGRAM_BLOCK_ID);
+    console.log("Language:", selectedLanguage);
+    console.log("Token exists:", Boolean(ADSGRAM_TOKEN));
+    console.log("Token length:", ADSGRAM_TOKEN?.length || 0);
+    console.log("Token prefix:", ADSGRAM_TOKEN?.slice(0, 4) || "");
+    console.log("Token suffix:", ADSGRAM_TOKEN?.slice(-4) || "");
+
+    let response;
+
+    try {
+        response = await fetch(rawUrl, {
+            method: "GET"
+        });
+    } catch (networkError) {
+        console.error(
+            "AdsGram network error:",
+            networkError
+        );
+
         throw new Error(
-            `AdsGram HTTP ${response.status}: ${body}`
+            "NETWORK_ERROR\n" +
+            `Message: ${networkError.message}\n\n` +
+            `Request URL: ${safeUrl}\n` +
+            `Method: GET`
         );
     }
 
-    return JSON.parse(body);
+    const body = await response.text();
+
+    console.log("AdsGram HTTP status:", response.status);
+    console.log("AdsGram response:", body);
+    console.log("====================================");
+
+    if (!response.ok) {
+        const error = new Error(
+            `AdsGram HTTP ${response.status}: ${body}`
+        );
+
+        // Extra information for Telegram debugging.
+        error.debug = {
+            status: response.status,
+            response: body,
+            method: "GET",
+            url: safeUrl,
+            blockId: String(ADSGRAM_BLOCK_ID),
+            language: selectedLanguage,
+            tokenExists: Boolean(ADSGRAM_TOKEN),
+            tokenLength: ADSGRAM_TOKEN?.length || 0,
+            tokenPrefix: ADSGRAM_TOKEN?.slice(0, 4) || "",
+            tokenSuffix: ADSGRAM_TOKEN?.slice(-4) || ""
+        };
+
+        throw error;
+    }
+
+    let data;
+
+    try {
+        data = JSON.parse(body);
+    } catch (parseError) {
+        const error = new Error(
+            "AdsGram returned invalid JSON."
+        );
+
+        error.debug = {
+            status: response.status,
+            response: body,
+            method: "GET",
+            url: safeUrl,
+            blockId: String(ADSGRAM_BLOCK_ID),
+            language: selectedLanguage,
+            tokenExists: Boolean(ADSGRAM_TOKEN),
+            tokenLength: ADSGRAM_TOKEN?.length || 0
+        };
+
+        throw error;
+    }
+
+    return data;
+}
+
+// ============================================================
+// FORMAT ADSGRAM DEBUG INFORMATION
+// ============================================================
+
+function formatAdsGramError(error) {
+    const debug = error.debug || {};
+
+    let message =
+        "❌ ADSGRAM ERROR\n\n" +
+        `Message: ${error.message || "Unknown error"}\n\n`;
+
+    if (debug.status !== undefined) {
+        message +=
+            `HTTP Status: ${debug.status}\n`;
+    }
+
+    if (debug.response !== undefined) {
+        message +=
+            `AdsGram Response:\n${debug.response}\n\n`;
+    }
+
+    message +=
+        `Method: ${debug.method || "GET"}\n` +
+        `Endpoint: https://api.adsgram.ai/advbot\n` +
+        `Block ID: ${debug.blockId || ADSGRAM_BLOCK_ID}\n` +
+        `Language: ${debug.language || "en"}\n` +
+        `Token exists: ${debug.tokenExists ?? Boolean(ADSGRAM_TOKEN)}\n` +
+        `Token length: ${debug.tokenLength ?? ADSGRAM_TOKEN?.length ?? 0}\n` +
+        `Token prefix: ${debug.tokenPrefix ?? ADSGRAM_TOKEN?.slice(0, 4) ?? ""}\n` +
+        `Token suffix: ${debug.tokenSuffix ?? ADSGRAM_TOKEN?.slice(-4) ?? ""}`;
+
+    return message;
 }
 
 // ============================================================
@@ -137,23 +255,33 @@ async function showAd(ctx) {
         );
 
         console.log(
-            "AdsGram response:",
+            "AdsGram parsed response:",
             JSON.stringify(ad, null, 2)
         );
 
-        // No advertisement available
+        // ----------------------------------------------------
+        // Validate advertisement
+        // ----------------------------------------------------
+
         if (!ad || !ad.reward_url || !ad.click_url) {
-            await ctx.reply(
-                "❌ No advertisement is available right now.\n\n" +
-                "Please try again later."
-            );
+            const debugMessage =
+                "❌ ADSGRAM ERROR\n\n" +
+                "AdsGram returned a response, but it does not " +
+                "contain the required advertisement fields.\n\n" +
+                "Received response:\n" +
+                JSON.stringify(ad, null, 2);
+
+            await ctx.reply(debugMessage);
 
             return;
         }
 
         const user = getUser(userId);
 
+        // ----------------------------------------------------
         // Create pending reward session
+        // ----------------------------------------------------
+
         user.pendingAd = {
             createdAt: Date.now(),
             rewardUrl: ad.reward_url,
@@ -218,7 +346,7 @@ async function showAd(ctx) {
                     error.message
                 );
 
-                // Continue to text fallback
+                // Continue to text fallback.
             }
         }
 
@@ -243,10 +371,17 @@ async function showAd(ctx) {
             error
         );
 
-        await ctx.reply(
-            "❌ Failed to load advertisement.\n\n" +
-            "Please try again later."
-        );
+        // Send full useful debug information to Telegram.
+        const debugMessage = formatAdsGramError(error);
+
+        try {
+            await ctx.reply(debugMessage);
+        } catch (telegramError) {
+            console.error(
+                "Failed to send AdsGram debug information:",
+                telegramError
+            );
+        }
     }
 }
 
@@ -256,9 +391,9 @@ async function showAd(ctx) {
 
 const bot = new Telegraf(BOT_TOKEN);
 
-// ------------------------------------------------------------
+// ============================================================
 // START
-// ------------------------------------------------------------
+// ============================================================
 
 bot.start(async (ctx) => {
     const user = getUser(ctx.from.id);
@@ -284,17 +419,17 @@ bot.start(async (ctx) => {
     );
 });
 
-// ------------------------------------------------------------
+// ============================================================
 // /ad
-// ------------------------------------------------------------
+// ============================================================
 
 bot.command("ad", async (ctx) => {
     await showAd(ctx);
 });
 
-// ------------------------------------------------------------
+// ============================================================
 // WATCH AD BUTTON
-// ------------------------------------------------------------
+// ============================================================
 
 bot.action("watch_ad", async (ctx) => {
     await ctx.answerCbQuery();
@@ -302,9 +437,9 @@ bot.action("watch_ad", async (ctx) => {
     await showAd(ctx);
 });
 
-// ------------------------------------------------------------
-// BALANCE
-// ------------------------------------------------------------
+// ============================================================
+// /balance
+// ============================================================
 
 bot.command("balance", async (ctx) => {
     const user = getUser(ctx.from.id);
@@ -315,9 +450,9 @@ bot.command("balance", async (ctx) => {
     );
 });
 
-// ------------------------------------------------------------
+// ============================================================
 // BALANCE BUTTON
-// ------------------------------------------------------------
+// ============================================================
 
 bot.action("balance", async (ctx) => {
     await ctx.answerCbQuery();
@@ -342,13 +477,16 @@ app.get("/adsgram/reward", async (req, res) => {
 
     const userId = req.query.userid;
 
+    // --------------------------------------------------------
+    // Validate user ID
+    // --------------------------------------------------------
+
     if (!userId) {
         return res
             .status(400)
             .send("Missing userid");
     }
 
-    // Telegram IDs are numeric
     if (!/^\d+$/.test(String(userId))) {
         return res
             .status(400)
@@ -368,7 +506,7 @@ app.get("/adsgram/reward", async (req, res) => {
     }
 
     // --------------------------------------------------------
-    // Reward links are valid for 1 hour according to AdsGram
+    // Reward links are valid for 1 hour
     // --------------------------------------------------------
 
     const ONE_HOUR = 60 * 60 * 1000;
@@ -429,59 +567,8 @@ app.get("/adsgram/reward", async (req, res) => {
         .send("Reward processed.");
 });
 
-
-app.get("/debug-adsgram", async (req, res) => {
-    try {
-        const url = new URL("https://api.adsgram.ai/advbot");
-
-        url.searchParams.set("tgid", "123456789");
-        url.searchParams.set("blockid", "42870");
-        url.searchParams.set("language", "en");
-        url.searchParams.set("token", ADSGRAM_TOKEN);
-
-        console.log("========== ADSGRAM DEBUG ==========");
-        console.log("URL:", url.origin + url.pathname);
-        console.log("tgid: 123456789");
-        console.log("blockid: 42870");
-        console.log("language: en");
-        console.log("token exists:", Boolean(ADSGRAM_TOKEN));
-        console.log("token length:", ADSGRAM_TOKEN?.length);
-        console.log("token prefix:", ADSGRAM_TOKEN?.slice(0, 4));
-        console.log("token suffix:", ADSGRAM_TOKEN?.slice(-4));
-
-        const response = await fetch(url);
-        const body = await response.text();
-
-        console.log("HTTP status:", response.status);
-        console.log("Response:", body);
-        console.log("===================================");
-
-        res.status(200).json({
-            request: {
-                endpoint: "https://api.adsgram.ai/advbot",
-                tgid: "123456789",
-                blockid: "42870",
-                language: "en",
-                token_exists: Boolean(ADSGRAM_TOKEN),
-                token_length: ADSGRAM_TOKEN?.length
-            },
-            adsgram: {
-                status: response.status,
-                response: body
-            }
-        });
-
-    } catch (error) {
-        console.error("Debug error:", error);
-
-        res.status(500).json({
-            error: error.message
-        });
-    }
-});
-
 // ============================================================
-// START SERVER
+// START HTTP SERVER
 // ============================================================
 
 app.listen(
