@@ -429,6 +429,57 @@ app.get("/adsgram/reward", async (req, res) => {
         .send("Reward processed.");
 });
 
+
+app.get("/debug-adsgram", async (req, res) => {
+    try {
+        const url = new URL("https://api.adsgram.ai/advbot");
+
+        url.searchParams.set("tgid", "123456789");
+        url.searchParams.set("blockid", "42870");
+        url.searchParams.set("language", "en");
+        url.searchParams.set("token", ADSGRAM_TOKEN);
+
+        console.log("========== ADSGRAM DEBUG ==========");
+        console.log("URL:", url.origin + url.pathname);
+        console.log("tgid: 123456789");
+        console.log("blockid: 42870");
+        console.log("language: en");
+        console.log("token exists:", Boolean(ADSGRAM_TOKEN));
+        console.log("token length:", ADSGRAM_TOKEN?.length);
+        console.log("token prefix:", ADSGRAM_TOKEN?.slice(0, 4));
+        console.log("token suffix:", ADSGRAM_TOKEN?.slice(-4));
+
+        const response = await fetch(url);
+        const body = await response.text();
+
+        console.log("HTTP status:", response.status);
+        console.log("Response:", body);
+        console.log("===================================");
+
+        res.status(200).json({
+            request: {
+                endpoint: "https://api.adsgram.ai/advbot",
+                tgid: "123456789",
+                blockid: "42870",
+                language: "en",
+                token_exists: Boolean(ADSGRAM_TOKEN),
+                token_length: ADSGRAM_TOKEN?.length
+            },
+            adsgram: {
+                status: response.status,
+                response: body
+            }
+        });
+
+    } catch (error) {
+        console.error("Debug error:", error);
+
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
 // ============================================================
 // START SERVER
 // ============================================================
