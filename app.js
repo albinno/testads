@@ -13,6 +13,13 @@ const ADSGRAM_BLOCK_ID = process.env.ADSGRAM_BLOCK_ID;
 
 const REWARD_POINTS = Number(process.env.REWARD_POINTS || 100);
 
+console.log("AdsGram token loaded:", {
+    exists: !!ADSGRAM_TOKEN,
+    length: ADSGRAM_TOKEN?.length,
+    prefix: ADSGRAM_TOKEN?.slice(0, 4),
+    suffix: ADSGRAM_TOKEN?.slice(-4)
+});
+
 if (!BOT_TOKEN) {
     throw new Error("BOT_TOKEN is missing");
 }
