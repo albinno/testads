@@ -30,7 +30,7 @@
     <!--
     PASTE YOUR MONETAG SDK TAG HERE
     -->
-
+    <script src='//libtl.com/sdk.js' data-zone='11576997' data-sdk='show_11576997'></script>
 
     <style>
 
@@ -461,43 +461,49 @@
             //
             // ------------------------------------------------
 
-            if (
-                typeof window.MONETAG_SHOW_AD !==
-                "function"
-            ) {
-
-                throw new Error(
-                    "Monetag SDK is not configured yet. " +
-                    "Paste your generated Monetag SDK tag " +
-                    "and expose the correct show_ZONE_ID function."
-                );
-
-            }
-
-
-            setStatus(
-                "Loading advertisement...",
-                "info"
-            );
-
-
+            
             // ------------------------------------------------
-            // Show advertisement
-            // ------------------------------------------------
+// Verify Monetag SDK
+// ------------------------------------------------
 
-            const event =
-                await window.MONETAG_SHOW_AD({
-                    ymid,
+if (
+    typeof window.show_11576997 !==
+    "function"
+) {
+    throw new Error(
+        "Monetag SDK failed to load. " +
+        "show_11576997() is unavailable."
+    );
+}
 
-                    requestVar:
-                        "watch_ad"
-                });
+setStatus(
+    "Loading advertisement...",
+    "info"
+);
 
 
-            console.log(
-                "Monetag event:",
-                event
-            );
+// ------------------------------------------------
+// Show Monetag Rewarded Interstitial
+// ------------------------------------------------
+
+await window.show_11576997();
+
+
+// ------------------------------------------------
+// Monetag says the rewarded ad completed
+// ------------------------------------------------
+
+console.log(
+    "Monetag Rewarded Interstitial completed."
+);
+
+setStatus(
+    "✅ Ad completed.\n" +
+    "Waiting for backend reward confirmation...",
+    "success"
+);
+
+
 
 
             // ------------------------------------------------
