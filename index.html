@@ -30,7 +30,7 @@
     <!--
     PASTE YOUR MONETAG SDK TAG HERE
     -->
-    <script src='//libtl.com/sdk.js' data-zone='11576997' data-sdk='show_11576997'></script>
+    <script src="https://libtl.com/sdk.js" data-zone="11576997" data-sdk="show_11576997"></script>
 
     <style>
 
@@ -463,79 +463,43 @@
 
             
             // ------------------------------------------------
-// Verify Monetag SDK
-// ------------------------------------------------
-
-if (
-    typeof window.show_11576997 !==
-    "function"
-) {
-    throw new Error(
-        "Monetag SDK failed to load. " +
-        "show_11576997() is unavailable."
-    );
-}
-
-setStatus(
-    "Loading advertisement...",
-    "info"
-);
-
-
-// ------------------------------------------------
-// Show Monetag Rewarded Interstitial
-// ------------------------------------------------
-
-await window.show_11576997();
-
-
-// ------------------------------------------------
-// Monetag says the rewarded ad completed
-// ------------------------------------------------
-
-console.log(
-    "Monetag Rewarded Interstitial completed."
-);
-
-setStatus(
-    "✅ Ad completed.\n" +
-    "Waiting for backend reward confirmation...",
-    "success"
-);
-
-
-
-
-            // ------------------------------------------------
-            // Monetag confirmed an event.
-            //
-            // IMPORTANT:
-            // Backend postback is still our source of truth
-            // for the actual reward.
+            // Verify Monetag SDK
             // ------------------------------------------------
 
             if (
-                event &&
-                event.reward_event_type ===
-                "valued"
+                typeof window.show_11576997 !==
+                "function"
             ) {
-
-                setStatus(
-                    "✅ Monetag confirmed a valued event.\n" +
-                    "Waiting for backend reward confirmation...",
-                    "success"
+                throw new Error(
+                    "Monetag SDK failed to load. " +
+                    "show_11576997() is unavailable."
                 );
-
-            } else {
-
-                setStatus(
-                    "Ad event received, but it was not valued.\n" +
-                    "No reward was given.",
-                    "info"
-                );
-
             }
 
+            setStatus(
+                "Loading advertisement...",
+                "info"
+            );
+
+            // ------------------------------------------------
+            // Show Monetag Rewarded Interstitial
+            // ------------------------------------------------
+
+            await window.show_11576997({ ymid, requestVar: "watch_ad" });
+
+            // ------------------------------------------------
+            // Monetag says the rewarded ad completed
+            // ------------------------------------------------
+
+            console.log(
+                "Monetag Rewarded Interstitial completed."
+            );
+
+            setStatus(
+                "✅ Ad completed.\n" +
+                "Waiting for backend reward confirmation...",
+                "success"
+            );
 
             // Give the postback a moment to arrive.
             setTimeout(

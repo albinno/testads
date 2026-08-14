@@ -9,9 +9,6 @@ const app = express();
 const PORT = Number(process.env.PORT || 10000);
 const REWARD_POINTS = Number(process.env.REWARD_POINTS || 100);
 
-// Optional secret added to the Monetag postback URL.
-// Set this in Render.
-const POSTBACK_SECRET = process.env.POSTBACK_SECRET || "";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -183,22 +180,6 @@ app.get("/monetag/postback", async (req, res) => {
             JSON.stringify(req.query, null, 2)
         );
 
-        // ----------------------------------------------------
-        // Optional secret verification
-        // ----------------------------------------------------
-
-        if (POSTBACK_SECRET) {
-            const suppliedSecret =
-                String(req.query.secret || "");
-
-            if (suppliedSecret !== POSTBACK_SECRET) {
-                console.warn(
-                    "[POSTBACK] Invalid secret"
-                );
-
-                return res.sendStatus(403);
-            }
-        }
 
         // ----------------------------------------------------
         // Read Monetag parameters
@@ -478,10 +459,6 @@ app.listen(
 
         console.log(
             `Reward points: ${REWARD_POINTS}`
-        );
-
-        console.log(
-            `Postback secret enabled: ${Boolean(POSTBACK_SECRET)}`
         );
     }
 );
